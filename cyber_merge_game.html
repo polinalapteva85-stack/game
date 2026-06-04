@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Merge // Неоновые Кристаллы</title>
+    <!-- Tailwind CSS для стильного интерфейса -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
+    <!-- Физический движок Matter.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #03050a;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .font-tech {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .neon-shadow {
+            box-shadow: 0 0 20px rgba(197, 160, 89, 0.2);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center relative select-none p-2 md:p-4">
+
+    <!-- Фоновое свечение -->
+    <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-[#C5A059]/5 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Контейнер игры -->
+    <div class="relative w-full max-w-lg aspect-[9/16] bg-[#070b14]/95 border border-gray-800 rounded-3xl flex flex-col overflow-hidden shadow-2xl z-10 neon-shadow">
+        
+        <!-- Верхняя Панель: Счет и Следующий Кристалл -->
+        <div class="p-4 flex justify-between items-center bg-[#0a101d]/80 border-b border-gray-800 z-20">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-gray-500 font-tech">// SCORE</p>
+                <p id="score-val" class="text-3xl font-black text-white font-tech">0</p>
+            </div>
+            
+            <!-- Превью следующего -->
+            <div class="flex flex-col items-center">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500 font-tech mb-1">// NEXT</p>
+                <div class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center relative">
+                    <div id="next-preview" class="rounded-full transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500 font-tech">// BEST</p>
+                <p id="best-val" class="text-2xl font-bold text-[#C5A059] font-tech">0</p>
+            </div>
+        </div>
+
+        <!-- Игровая Зона (Canvas) -->
+        <div class="flex-grow w-full relative" id="game-zone">
+            <canvas id="gameCanvas" class="absolute inset-0 block w-full h-full"></canvas>
+            
+            <!-- Линия переполнения (предупреждение) -->
+            <div id="danger-line" class="absolute left-0 right-0 h-0.5 border-t-2 border-dashed border-red-500/40 pointer-events-none opacity-0 transition-opacity duration-300" style="top: 15%;"></div>
+        </div>
+
+        <!-- ИГРОВОЕ МЕНЮ: НАЧАЛО -->
+        <div id="start-menu" class="absolute inset-0 bg-[#03050a]/95 flex flex-col items-center justify-center p-8 z-30 transition-all duration-500">
+            <div class="text-center space-y-6 max-w-xs">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#C5A059]/10 border border-[#C5A059]/30 rounded-full text-xs text-[#C5A059] font-tech uppercase tracking-wider">
+                    <span class="w-2 h-2 bg-[#C5A059] rounded-full animate-pulse"></span> MERGE_CORE_V2.0
+                </div>
+                <h1 class="text-4xl font-black font-tech text-white leading-none tracking-tight">
+                    CYBER <span class="text-[#C5A059]">MERGE</span>
+                </h1>
+                <p class="text-xs text-gray-400 font-light leading-relaxed">
+                    Бросай неоновые кристаллы в колбу. Одинаковые кристаллы сливаются, создавая новые, более мощные элементы. Собери финальную Звезду!
+                </p>
+                <button id="start-btn" class="w-full py-4 bg-[#C5A059] text-black font-tech font-bold uppercase tracking-widest rounded-xl hover:bg-white transition-all duration-300 active:scale-95">
+                    [ НАЧАТЬ СЛИЯНИЕ ]
+                </button>
+            </div>
+        </div>
+
+        <!-- ИГРОВОЕ МЕНЮ: КОНЕЦ -->
+        <div id="game-over-menu" class="absolute inset-0 bg-[#03050a]/95 flex flex-col items-center justify-center p-8 z-30 hidden opacity-0 transition-all duration-500">
+            <div class="text-center space-y-6 max-w-xs">
+                <span class="text-red-500 font-tech uppercase tracking-widest text-xs animate-pulse">// КОЛБА ПЕРЕПОЛНЕНА</span>
+                <h2 class="text-3xl font-black font-tech text-white">ИГРА ОКОНЧЕНА</h2>
+                
+                <div class="p-6 bg-[#0a101d] border border-gray-800 rounded-2xl space-y-2">
+                    <p class="text-xs uppercase text-gray-500 font-tech">Твой счет:</p>
+                    <p id="final-score" class="text-4xl font-black text-[#C5A059] font-tech">0</p>
+                </div>
+
+                <button id="restart-btn" class="w-full py-4 bg-[#C5A059] text-black font-tech font-bold uppercase tracking-widest rounded-xl hover:bg-white transition duration-300 active:scale-95">
+                    [ СЫГРАТЬ ЕЩЕ ]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Процедурный синтезатор звуков
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type, tier = 0) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'drop') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.1);
+                } else if (type === 'merge') {
+                    // Музыкальные неоновые звуки слияния
+                    osc.type = 'sine';
+                    const baseFreq = 220 + (tier * 55); // Тон выше при большем кристалле
+                    osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(baseFreq * 2, audioCtx.currentTime + 0.2);
+                    
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                } else if (type === 'fail') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.5);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.5);
+                }
+            } catch (e) {
+                console.log("Звук не поддерживается.");
+            }
+        }
+
+        // Настройки кристаллов ( Suika Game Style )
+        const CRYSTAL_TIERS = [
+            { radius: 14, color: '#FF3366', glow: 'rgba(255, 51, 102, 0.8)', points: 1 },
+            { radius: 20, color: '#33FFFF', glow: 'rgba(51, 255, 255, 0.8)', points: 3 },
+            { radius: 28, color: '#9933FF', glow: 'rgba(153, 51, 255, 0.8)', points: 6 },
+            { radius: 36, color: '#33FF66', glow: 'rgba(51, 255, 102, 0.8)', points: 10 },
+            { radius: 45, color: '#FFFF33', glow: 'rgba(255, 255, 51, 0.8)', points: 15 },
+            { radius: 55, color: '#FF9933', glow: 'rgba(255, 153, 51, 0.8)', points: 21 },
+            { radius: 66, color: '#FF3333', glow: 'rgba(255, 51, 51, 0.8)', points: 28 },
+            { radius: 78, color: '#0066FF', glow: 'rgba(0, 102, 255, 0.8)', points: 36 },
+            { radius: 90, color: '#C5A059', glow: 'rgba(197, 160, 89, 0.9)', points: 45 } // Финальная Сверхновая!
+        ];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameZone = document.getElementById('game-zone');
+
+        function resizeCanvas() {
+            canvas.width = gameZone.clientWidth;
+            canvas.height = gameZone.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Инициализация Matter.js
+        const { Engine, World, Bodies, Body, Events } = Matter;
+        let engine, world;
+        let score = 0;
+        let bestScore = localStorage.getItem('merge_best') || 0;
+        document.getElementById('best-val').innerText = bestScore;
+
+        let activeCrystal = null;
+        let nextTier = 0;
+        let isCooldown = false;
+        let gameActive = false;
+        let particles = [];
+        let mergeQueue = [];
+        let deathTimer = null;
+
+        // Линия смерти по оси Y (15% от верха экрана)
+        const getDeathY = () => canvas.height * 0.15;
+
+        // Система взрыва неоновых частиц
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 4 + 2;
+                this.speedX = (Math.random() - 0.5) * 8;
+                this.speedY = (Math.random() - 0.5) * 8;
+                this.color = color;
+                this.alpha = 1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.alpha -= 0.03;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // Инициализация физического мира
+        function initPhysics() {
+            engine = Engine.create({ gravity: { y: 1.2 } });
+            world = engine.world;
+
+            // Стенки стакана
+            const wallOptions = { isStatic: true, friction: 0.1, render: { visible: false } };
+            const bottom = Bodies.rectangle(canvas.width / 2, canvas.height + 30, canvas.width, 80, wallOptions);
+            const leftWall = Bodies.rectangle(-30, canvas.height / 2, 80, canvas.height, wallOptions);
+            const rightWall = Bodies.rectangle(canvas.width + 30, canvas.height / 2, 80, canvas.height, wallOptions);
+
+            World.add(world, [bottom, leftWall, rightWall]);
+
+            // Обработка столкновения кристаллов одного тира
+            Events.on(engine, 'collisionStart', (event) => {
+                event.pairs.forEach((pair) => {
+                    const { bodyA, bodyB } = pair;
+                    if (bodyA.plugin.tier !== undefined && bodyB.plugin.tier !== undefined) {
+                        if (bodyA.plugin.tier === bodyB.plugin.tier && !bodyA.isDead && !bodyB.isDead) {
+                            // Добавляем в очередь на слияние (чтобы не менять физику прямо во время просчета кадра)
+                            mergeQueue.push({ bodyA, bodyB });
+                        }
+                    }
+                });
+            });
+        }
+
+        // Спавн нового падающего кристалла
+        function generateNextPreview() {
+            nextTier = Math.floor(Math.random() * 4); // Только первые 4 мелких тира для бросков
+            const previewEl = document.getElementById('next-preview');
+            const info = CRYSTAL_TIERS[nextTier];
+            previewEl.style.width = (info.radius * 2) + 'px';
+            previewEl.style.height = (info.radius * 2) + 'px';
+            previewEl.style.backgroundColor = info.color;
+            previewEl.style.boxShadow = `0 0 15px ${info.glow}`;
+        }
+
+        function spawnActiveCrystal(x = canvas.width / 2) {
+            const tier = nextTier;
+            generateNextPreview();
+
+            activeCrystal = {
+                x: Math.max(CRYSTAL_TIERS[tier].radius, Math.min(canvas.width - CRYSTAL_TIERS[tier].radius, x)),
+                y: getDeathY() - 30,
+                tier: tier
+            };
+        }
+
+        // Сбросить кристалл в колбу
+        function dropCrystal() {
+            if (isCooldown || !gameActive || !activeCrystal) return;
+
+            const info = CRYSTAL_TIERS[activeCrystal.tier];
+            const body = Bodies.circle(activeCrystal.x, activeCrystal.y, info.radius, {
+                restitution: 0.2,
+                friction: 0.1,
+                plugin: { tier: activeCrystal.tier }
+            });
+
+            World.add(world, body);
+            playSound('drop');
+
+            activeCrystal = null;
+            isCooldown = true;
+
+            setTimeout(() => {
+                if (gameActive) {
+                    spawnActiveCrystal();
+                    isCooldown = false;
+                }
+            }, 600); // Кулдаун между бросками
+        }
+
+        // Слияние двух кристаллов в один побольше
+        function handleMerges() {
+            while (mergeQueue.length > 0) {
+                const { bodyA, bodyB } = mergeQueue.shift();
+
+                // Проверяем, не слились ли они уже с кем-то в текущем цикле
+                if (bodyA.isDead || bodyB.isDead) continue;
+
+                bodyA.isDead = true;
+                bodyB.isDead = true;
+
+                const currentTier = bodyA.plugin.tier;
+                const nextTierIndex = currentTier + 1;
+
+                // Находим координаты центра взрыва
+                const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                // Начисляем очки
+                score += CRYSTAL_TIERS[currentTier].points;
+                document.getElementById('score-val').innerText = score;
+
+                // Создаем красивый неоновый взрыв частиц
+                createExplosion(midX, midY, CRYSTAL_TIERS[currentTier].color);
+                playSound('merge', currentTier);
+
+                // Удаляем старые кристаллы
+                World.remove(world, bodyA);
+                World.remove(world, bodyB);
+
+                // Если это не самый большой тир, создаем новый кристалл
+                if (nextTierIndex < CRYSTAL_TIERS.length) {
+                    const nextInfo = CRYSTAL_TIERS[nextTierIndex];
+                    const mergedBody = Bodies.circle(midX, midY, nextInfo.radius, {
+                        restitution: 0.3,
+                        friction: 0.1,
+                        plugin: { tier: nextTierIndex }
+                    });
+                    World.add(world, mergedBody);
+                }
+            }
+        }
+
+        // Проверка на проигрыш (когда кристаллы превышают линию переполнения)
+        function checkGameOver() {
+            let isOverflowing = false;
+
+            const bodies = Matter.Composite.allBodies(world);
+            bodies.forEach((body) => {
+                if (body.isStatic) return;
+                // Если кристалл поднялся выше линии "смерти"
+                if (body.position.y - body.circleRadius < getDeathY()) {
+                    isOverflowing = true;
+                }
+            });
+
+            const dangerLine = document.getElementById('danger-line');
+
+            if (isOverflowing) {
+                dangerLine.classList.remove('opacity-0');
+                dangerLine.classList.add('opacity-100');
+
+                if (!deathTimer) {
+                    deathTimer = setTimeout(() => {
+                        triggerGameOver();
+                    }, 2200); // Даем 2.2 секунды на то, чтобы кристаллы утряслись
+                }
+            } else {
+                dangerLine.classList.add('opacity-0');
+                dangerLine.classList.remove('opacity-100');
+                if (deathTimer) {
+                    clearTimeout(deathTimer);
+                    deathTimer = null;
+                }
+            }
+        }
+
+        function triggerGameOver() {
+            gameActive = false;
+            playSound('fail');
+
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('cyber_best_merge', bestScore);
+                document.getElementById('best-val').innerText = bestScore;
+            }
+
+            document.getElementById('final-score').innerText = score;
+            const gameOverMenu = document.getElementById('game-over-menu');
+            gameOverMenu.classList.remove('hidden');
+            setTimeout(() => gameOverMenu.classList.add('opacity-100'), 50);
+        }
+
+        // Игровой цикл отрисовки
+        function update() {
+            if (gameActive) {
+                Engine.update(engine, 1000 / 60);
+                handleMerges();
+                checkGameOver();
+            }
+
+            // Очистка
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Линия прицеливания (вертикальный пунктир)
+            if (activeCrystal && gameActive) {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.setLineDash([5, 10]);
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(activeCrystal.x, activeCrystal.y);
+                ctx.lineTo(activeCrystal.x, canvas.height);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Отрисовка всех физических кристаллов в колбе
+            if (world) {
+                const bodies = Matter.Composite.allBodies(world);
+                bodies.forEach((body) => {
+                    if (body.isStatic) return;
+
+                    const tier = body.plugin.tier;
+                    const info = CRYSTAL_TIERS[tier];
+
+                    ctx.save();
+                    ctx.translate(body.position.x, body.position.y);
+                    ctx.rotate(body.angle);
+
+                    // Свечение неонового кристалла
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = info.color;
+                    ctx.fillStyle = info.color;
+                    ctx.strokeStyle = '#050811';
+                    ctx.lineWidth = 2;
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, info.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Небольшой декоративный блик внутри кристалла для 3D объема
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.beginPath();
+                    ctx.arc(-info.radius * 0.3, -info.radius * 0.3, info.radius * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.restore();
+                });
+            }
+
+            // Рисуем и обновляем частицы взрыва
+            particles.forEach((p, i) => {
+                p.update();
+                p.draw();
+                if (p.alpha <= 0) particles.splice(i, 1);
+            });
+
+            // Рисуем активный удерживаемый кристалл (прицел)
+            if (activeCrystal && gameActive) {
+                const info = CRYSTAL_TIERS[activeCrystal.tier];
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = info.color;
+                ctx.fillStyle = info.color;
+                ctx.beginPath();
+                ctx.arc(activeCrystal.x, activeCrystal.y, info.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // Запуск рендерера
+        requestAnimationFrame(update);
+
+        // Управление бросками (Клик / Тап)
+        function handleInputMove(clientX) {
+            if (!activeCrystal || !gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const radius = CRYSTAL_TIERS[activeCrystal.tier].radius;
+            // Удерживаем кристалл в пределах стенок
+            activeCrystal.x = Math.max(radius + 10, Math.min(canvas.width - radius - 10, x));
+        }
+
+        canvas.addEventListener('mousemove', (e) => handleInputMove(e.clientX));
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) handleInputMove(e.touches[0].clientX);
+        });
+
+        canvas.addEventListener('mouseup', () => dropCrystal());
+        canvas.addEventListener('touchend', () => dropCrystal());
+
+        // Запуск игры
+        function startGame() {
+            initPhysics();
+            score = 0;
+            document.getElementById('score-val').innerText = score;
+            generateNextPreview();
+            spawnActiveCrystal();
+            gameActive = true;
+        }
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const menu = document.getElementById('start-menu');
+            menu.classList.add('opacity-0');
+            setTimeout(() => {
+                menu.classList.add('hidden');
+                startGame();
+            }, 500);
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            const menu = document.getElementById('game-over-menu');
+            menu.classList.remove('opacity-100');
+            menu.classList.add('opacity-0');
+            setTimeout(() => {
+                menu.classList.add('hidden');
+                // Очищаем мир полностью
+                Matter.World.clear(world, false);
+                Matter.Engine.clear(engine);
+                particles = [];
+                mergeQueue = [];
+                if (deathTimer) clearTimeout(deathTimer);
+                deathTimer = null;
+                startGame();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
